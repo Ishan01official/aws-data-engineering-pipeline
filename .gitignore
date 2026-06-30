@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+# AWS / local
+.aws-sam/
+*.tfstate
+*.tfstate.backup
+.terraform/
+# Data — never commit data into the lake repo
+*.parquet
+*.csv
+data/
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
