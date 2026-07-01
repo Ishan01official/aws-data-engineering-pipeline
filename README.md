@@ -1,62 +1,155 @@
-# AWS Data Engineering — From Fundamentals to Architect
+# AWS Data Engineering — Beginner to Architect
 
-A structured, build-as-you-learn reference for becoming effective at data engineering on AWS. It is designed to do three things at once, layered so you can read at whatever depth you need:
+A practical, build-as-you-learn reference for AWS data engineering. It takes you from "what is a data lake" to designing and deploying a production, multi-source data platform — and prepares you for the **AWS Certified Data Engineer – Associate (DEA-C01)** along the way.
 
-1. **Certification track** — everything mapped to the AWS Certified Data Engineer – Associate (DEA-C01) exam domains, so the same material that makes you competent also makes you certified.
-2. **Practitioner track** — runnable code, realistic pipelines, and the operational details (logging, idempotency, cost) that separate a demo from a system someone has to keep alive at 3am.
-3. **Architect track** — the *why*: service trade-offs, decision frameworks, failure modes, and the patterns that recur across real data platforms.
-
-Each module carries all three layers. A `📘 Cert`, `🔧 Practitioner`, and `🏛 Architect` marker tells you which lens a section is written through, so you can skim or go deep deliberately.
+This repo is opinionated about one thing: **you learn data engineering by building pipelines, breaking them, and fixing them — not by reading.** So every concept is paired with runnable code, a hands-on lab with cleanup, and the architect-level *why* behind each choice.
 
 ---
 
-## How to use this repo
+## Who this repo is for
 
-This is not a tutorial you read front-to-back in one sitting and forget. It is a reference system you work *through* and come *back* to. The recommended path:
+- **Beginners** who know some Python/SQL and want a structured path into AWS data engineering.
+- **Practitioners** who can write a Glue job but want production discipline: monitoring, idempotency, CI/CD, cost control.
+- **Senior engineers & aspiring architects** who need the decision frameworks and trade-off reasoning for designing platforms, not just pipelines.
+- **Cert candidates** preparing for DEA-C01 who want competence, not a brain-dump.
 
-- Read a module's `README.md` for the mental model and the diagram.
-- Do the lab in `labs/` for that module — the concepts only stick once you've broken something and fixed it.
-- Skim the `architect-notes.md` after the lab, when the trade-offs will actually mean something to you.
+You don't have to pick a lane. Every module is layered: a beginner explanation, a practitioner build, and an architect's trade-off discussion.
 
-If you are studying for the cert specifically, `10-cert-prep/` has the domain-by-domain mapping and a "what they actually test" guide that points back into the modules.
+---
+
+## The learning approach
+
+Every topic is taught the same way, first-principles and Feynman-style — explain it plainly, then go deep. Each service answers a fixed set of questions: what it is, why it exists, what real problem it solves, how it works internally, when to use it, when *not* to, how to implement and deploy it, how to monitor it, what fails in production, and what an architect weighs. If a page doesn't help you build or decide something, it doesn't belong here.
+
+---
+
+## High-level architecture
+
+The whole repo builds toward this: the **Enterprise Retail Sales Data Platform**, a production-style pipeline ingesting five source types into a governed lakehouse and warehouse.
+
+```mermaid
+flowchart LR
+    subgraph Sources
+        CSV[CSV uploads]
+        API[API data]
+        RDS[(RDS via DMS CDC)]
+        CLICK[Clickstream events]
+        SAAS[SaaS via AppFlow]
+    end
+    CSV & API & SAAS --> RAW[S3 Raw / Bronze]
+    RDS --> RAW
+    CLICK -->|Kinesis Firehose| RAW
+    RAW -->|S3 event| LAM[Lambda validate]
+    LAM --> CRAWL[Glue Crawler]
+    CRAWL --> ETL[Glue PySpark ETL]
+    ETL --> DQ{Data Quality<br/>checks}
+    DQ -->|pass| SILVER[S3 Silver/Gold<br/>Parquet/Iceberg]
+    DQ -->|fail| SNS[SNS alert]
+    SILVER --> ATH[Athena]
+    SILVER -->|COPY| RS[(Redshift Serverless)]
+    RS --> BI[BI / QuickSight]
+    LF[Lake Formation] -.governs.-> SILVER & ATH & RS
+    SF[Step Functions] -.orchestrates.-> CRAWL & ETL & DQ
+    EB[EventBridge] -.schedules.-> SF
+    CW[CloudWatch] -.monitors.-> LAM & ETL & RS
+```
+
+Full architecture, every CDK stack, and the deployment walkthrough live in [`projects/project-07-enterprise-data-platform/`](./projects/project-07-enterprise-data-platform/).
 
 ---
 
 ## Module map
 
-| # | Module | Core question it answers | Cert domain |
-|---|--------|--------------------------|-------------|
-| 00 | [Foundations](./00-foundations/) | What *is* data engineering, and what problem is each AWS service actually solving? | All |
-| 01 | [AWS Core Services](./01-aws-core-services/) | IAM, VPC, the account model — the substrate everything else sits on. | 4 |
-| 02 | [Storage & the S3 Data Lake](./02-storage-s3-lake/) | Where does data live, and how do you lay it out so it stays cheap and queryable? | 2 |
-| 03 | [Ingestion](./03-ingestion/) | How does data get *in* — batch, CDC, streaming, file drops? | 1 |
-| 04 | [Batch Processing](./04-batch-processing/) | Glue, EMR, Spark — transforming data at rest, at scale. | 1, 2 |
-| 05 | [Streaming](./05-streaming/) | Kinesis, MSK, Flink — transforming data in motion. | 1 |
-| 06 | [Orchestration](./06-orchestration/) | Step Functions, MWAA, EventBridge — making pipelines run reliably and in order. | 1, 3 |
-| 07 | [Data Warehouse (Redshift)](./07-data-warehouse-redshift/) | Serving analytics — modeling, distribution, performance. | 2, 3 |
-| 08 | [Governance & Security](./08-governance-security/) | Lake Formation, encryption, lineage, PII — keeping data safe and legal. | 4 |
-| 09 | [Architecture Patterns](./09-architecture-patterns/) | How do you assemble the pieces? Lambda vs Kappa, medallion, lakehouse. | All |
-| 10 | [Certification Prep](./10-cert-prep/) | Domain mapping, exam strategy, practice scenarios. | All |
+| # | Module | Level | What you learn |
+|---|--------|-------|----------------|
+| 00 | [Foundations](./00-foundations/) | Beginner | The lifecycle, the service landscape, lake vs warehouse vs lakehouse |
+| 01 | [AWS Core Services](./01-aws-core-services/) | Beginner | IAM, VPC, KMS, CloudWatch, CloudTrail, Secrets Manager, SSM |
+| 02 | [Storage & S3 Lake](./02-storage-s3-lake/) | Beginner→Int | S3, lifecycle, partitioning, bronze/silver/gold, Glue Catalog, Iceberg |
+| 03 | [Ingestion](./03-ingestion/) | Intermediate | DMS, DataSync, Transfer Family, AppFlow, API GW, Firehose |
+| 04 | [Batch Processing](./04-batch-processing/) | Intermediate | Glue ETL, crawlers, bookmarks, data quality, EMR, EMR Serverless |
+| 05 | [Streaming](./05-streaming/) | Advanced | Kinesis, MSK, Managed Flink, exactly-once, late data, replay |
+| 06 | [Orchestration](./06-orchestration/) | Intermediate | Step Functions, MWAA, Glue Workflows, EventBridge |
+| 07 | [Redshift Warehouse](./07-data-warehouse-redshift/) | Advanced | Modeling, dist/sort keys, Spectrum, COPY, materialized views |
+| 08 | [Governance & Security](./08-governance-security/) | Advanced | Lake Formation, KMS, column/row security, PII, CloudTrail |
+| 09 | [Architecture Patterns](./09-architecture-patterns/) | Architect | Lambda vs Kappa, medallion lakehouse, reference architectures |
+| 10 | [Certification Prep](./10-cert-prep/) | All | DEA-C01 domain mapping, scenario practice, exam strategy |
+| 11 | [Production Engineering](./11-production-engineering/) | Senior | CI/CD, OIDC, testing, idempotency, reconciliation, SLAs |
+| 12 | [Senior Architect Playbook](./12-senior-architect-playbook/) | Architect | Multi-account, environments, governance, enterprise platform design |
 
 ---
 
-## Conventions used throughout
+## Hands-on project map
 
-- **Diagrams** are authored in [Mermaid](https://mermaid.js.org/) (renders directly in GitHub) with `draw.io` (`.drawio`) exports in [`docs/diagrams/`](./docs/diagrams/) for the ones complex enough to deserve a real canvas.
-- **Code** is Python-first (boto3, PySpark, AWS SDK) because that is what the field runs on. Each snippet is meant to run, not just illustrate.
-- **Cost callouts** appear as `> 💰` blocks. On AWS, an architecture you can't afford is a wrong architecture, so cost is treated as a first-class design constraint, not an afterthought.
-- **Trade-off tables** appear wherever a decision has more than one defensible answer. The goal is to teach you to *choose*, not to memorize one blessed path.
-
----
-
-## Source material & honest scope
-
-This curriculum is original writing. It is informed by the standard canon of the field — Reis & Housley's *Fundamentals of Data Engineering*, the *Data Engineering with AWS* titles, and the official DEA-C01 exam guide — but it does not reproduce them. Where a concept maps cleanly to AWS's own documentation, the doc is linked rather than copied, because AWS docs change and you should learn to read the current source.
-
-If something here ever conflicts with the [official exam guide](https://aws.amazon.com/certification/certified-data-engineer-associate/) or current AWS docs, trust those. This repo is a teacher, not an authority.
+| Project | Builds | Key services |
+|---|---|---|
+| [01 File Ingestion](./projects/project-01-file-ingestion-pipeline/) | S3 drop → validate → catalog → query | S3, Lambda, Glue, Athena |
+| [02 API to S3](./projects/project-02-api-to-s3-pipeline/) | Scheduled API pull → lake | Lambda, EventBridge, S3 |
+| [03 CDC with DMS](./projects/project-03-cdc-dms-pipeline/) | RDS change capture → lake | DMS, S3, Glue |
+| [04 Streaming](./projects/project-04-streaming-kinesis-pipeline/) | Clickstream → S3/Redshift | Kinesis, Firehose, Flink |
+| [05 Redshift Warehouse](./projects/project-05-redshift-warehouse-pipeline/) | Dimensional marts | Redshift, Glue, S3 |
+| [06 Governed Lakehouse](./projects/project-06-governed-lakehouse/) | Iceberg + fine-grained access | Iceberg, Lake Formation, Athena |
+| [07 Enterprise Platform](./projects/project-07-enterprise-data-platform/) | **The capstone** — all of the above | Everything |
 
 ---
 
-## Status
+## Lab map
 
-Built module-by-module. See each module's README for completeness. Foundations (00) is the reference depth target — if a later module feels thinner, it's still in progress.
+Thirteen self-contained labs, each with objective, architecture, prerequisites, **cost warning**, steps, code, validation, **cleanup**, interview questions, and production notes. See [`labs/`](./labs/).
+
+> 💰 **Cost warning:** labs create real, billable AWS resources. Every lab has a mandatory cleanup step. Always set a budget alarm first — see [`labs/lab-01-s3-data-lake/`](./labs/) and the account-setup guidance in [Module 01](./01-aws-core-services/).
+
+---
+
+## Certification map
+
+This repo aligns to the four DEA-C01 domains. Full mapping — which modules and labs teach each domain, plus original scenario questions — is in [`CERTIFICATION-MAPPING.md`](./CERTIFICATION-MAPPING.md).
+
+| Domain | Weight | Where it's taught |
+|---|---|---|
+| 1 · Data Ingestion & Transformation | ~34% | Mods 03, 04, 05, 06 |
+| 2 · Data Store Management | ~26% | Mods 02, 07 |
+| 3 · Data Operations & Support | ~22% | Mods 06, 11 |
+| 4 · Data Security & Governance | ~18% | Mods 01, 08 |
+
+---
+
+## Prerequisites
+
+- Python 3.11+ and basic SQL.
+- An AWS account you control (a personal sandbox, **not** a shared work account).
+- AWS CLI v2 configured, and Node.js (for the AWS CDK).
+- A budget alarm set before you run anything billable.
+
+---
+
+## How to run a lab
+
+1. Read the lab's `README.md` fully, including the cost warning.
+2. Set/confirm a budget alarm.
+3. Follow the steps (CLI commands and/or CDK deploy).
+4. Run the validation step to confirm it works.
+5. **Run the cleanup step.** Non-negotiable.
+
+## How to deploy the end-to-end project
+
+The capstone deploys via AWS CDK (Python). High level: configure `infra/cdk/`, bootstrap your account, then `cdk deploy` the stacks in dependency order. Full instructions in the capstone project README. CI/CD via GitHub Actions + OIDC is documented in [Module 11](./11-production-engineering/).
+
+---
+
+## Roadmap, contribution, and the rest
+
+- [`ROADMAP.md`](./ROADMAP.md) — the beginner→architect progression.
+- [`LEARNING-PATH.md`](./LEARNING-PATH.md) — a concrete week-by-week order.
+- [`SERVICE-DECISION-FRAMEWORK.md`](./SERVICE-DECISION-FRAMEWORK.md) — the comparison tables (Glue vs EMR vs Lambda, etc.).
+- [`COST-OPTIMIZATION.md`](./COST-OPTIMIZATION.md), [`SECURITY-GOVERNANCE.md`](./SECURITY-GOVERNANCE.md), [`TROUBLESHOOTING-RUNBOOK.md`](./TROUBLESHOOTING-RUNBOOK.md) — the operational backbone.
+- [`INDUSTRY-USE-CASES.md`](./INDUSTRY-USE-CASES.md) — patterns by industry.
+- [`LATEST-AWS-UPDATES.md`](./LATEST-AWS-UPDATES.md) — and how to keep it current.
+- [`CONTRIBUTING.md`](./CONTRIBUTING.md) — conventions.
+
+---
+
+## Disclaimer
+
+AWS changes constantly — service limits, pricing, and features in this repo can go stale. **Always verify against official AWS docs, the AWS Big Data Blog, and AWS What's New.** This repo teaches durable concepts and decision-making; it is not a substitute for current AWS documentation.
+
+This is original writing. It's informed by the standard canon of the field and the official DEA-C01 exam guide, but it does not reproduce copyrighted book content. Where a concept maps to AWS's own docs, the docs are linked rather than copied.
