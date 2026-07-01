@@ -96,6 +96,8 @@ Full architecture, every CDK stack, and the deployment walkthrough live in [`pro
 
 Thirteen self-contained labs, each with objective, architecture, prerequisites, **cost warning**, steps, code, validation, **cleanup**, interview questions, and production notes. See [`labs/`](./labs/).
 
+**Status:** [Lab 01 — S3 Data Lake](./labs/lab-01-s3-data-lake/) is complete and fully runnable (deployable CDK stack, working scripts, passing tests, cleanup). Labs 02–13 are scaffolded and being built in priority order — see [`REPO-CONTENT-GAP-REPORT.md`](./REPO-CONTENT-GAP-REPORT.md) for exactly what's done vs pending.
+
 > 💰 **Cost warning:** labs create real, billable AWS resources. Every lab has a mandatory cleanup step. Always set a budget alarm first — see [`labs/lab-01-s3-data-lake/`](./labs/) and the account-setup guidance in [Module 01](./01-aws-core-services/).
 
 ---
@@ -145,6 +147,12 @@ The capstone deploys via AWS CDK (Python). High level: configure `infra/cdk/`, b
 - [`INDUSTRY-USE-CASES.md`](./INDUSTRY-USE-CASES.md) — patterns by industry.
 - [`LATEST-AWS-UPDATES.md`](./LATEST-AWS-UPDATES.md) — and how to keep it current.
 - [`CONTRIBUTING.md`](./CONTRIBUTING.md) — conventions.
+
+---
+
+## Content status
+
+Built in deep, complete passes. **[`REPO-CONTENT-GAP-REPORT.md`](./REPO-CONTENT-GAP-REPORT.md)** is the audited inventory of what's fully written vs still scaffolded. Currently complete and runnable: all root docs, Module 00, **Module 02 (S3 lake)**, and **Lab 01** (deployable CDK, working scripts, passing tests, cleanup). Everything else is scaffolded and marked as such — no silent placeholders.
 
 ---
 

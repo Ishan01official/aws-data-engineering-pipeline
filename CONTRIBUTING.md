@@ -23,3 +23,26 @@ Simple explanation → why it exists → where it fits → real industry use (e-
 
 ## Markdown
 Verify diagrams and links render on GitHub before committing. The `lint-docs` workflow checks links.
+
+## The 16-section service template
+
+Every AWS service page follows this structure (the content standard):
+
+1. Simple explanation — beginner language
+2. Why this service exists — the real engineering problem
+3. Where it fits in data engineering — storage/ingestion/processing/orchestration/warehouse/streaming/governance/monitoring/security/DevOps
+4. Real industry use cases — retail, banking/finance, healthcare, manufacturing, SaaS, IoT, media/advertising, product analytics
+5. How it works internally — components, data flow, limits, scaling, failure modes
+6. Hands-on code — Python/boto3/PySpark/SQL/CDK/CLI, runnable
+7. Code walkthrough — inputs, outputs, env vars, IAM, errors, logging, idempotency, retries
+8. Deployment — CLI / CDK / GitHub Actions
+9. Triggering — S3 event / EventBridge / SNS / SQS / Step Functions / API GW / CLI / CI-CD
+10. Monitoring — logs, metrics, alarms, alerts, dashboards, runbooks
+11. Security — least-privilege IAM, encryption, KMS, secrets, network, public-access, PII
+12. Cost — pricing drivers, traps, optimization, when not to use
+13. Troubleshooting — real failures and how to debug
+14. Architect-level decisions — when to choose/avoid, vs alternatives
+15. Interview questions — beginner/intermediate/senior/scenario
+16. Certification notes — DEA-C01 domain mapping
+
+The lab template: Objective → Business scenario → Architecture → Services → Prerequisites → Cost/safety → Setup → Code explanation → Deployment → Trigger → Validation → Expected output → Troubleshooting → Interview questions → Cleanup → Production notes → Architect extension.
