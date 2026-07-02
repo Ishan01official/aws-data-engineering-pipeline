@@ -6,6 +6,7 @@ venv/
 .env
 # AWS / local
 .aws-sam/
+cdk.out/
 *.tfstate
 *.tfstate.backup
 .terraform/

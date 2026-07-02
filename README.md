@@ -158,7 +158,7 @@ Built in deep, complete passes. **[`REPO-CONTENT-GAP-REPORT.md`](./REPO-CONTENT-
 |---|---|
 | ✅ **Complete** | Root reference docs · **Module 01 (AWS core services — IAM/STS, VPC, KMS/Secrets/SSM, CloudWatch/CloudTrail, SQS/SNS, EventBridge, Lambda, Step Functions)** · **Module 02 (S3 data lake)** · **Lab 01** (runnable end-to-end) · scripts, sample data, 47 passing tests |
 | ✅ **Deployable CDK** | `DataLakeStack` and `GlueCatalogStack` (both `cdk synth`-verified; DataLakeStack is Lab 01's) |
-| 🔄 **In progress** | Lab 02 (written + synth-verified; end-to-end AWS verification pending) |
+| 🔄 **In progress** | Lab 02 (code-complete with tests, commands, and cleanup; **synth-verified only** — one live-account verification run pending, checklist in the lab README) |
 | 📋 **Planned / scaffolded** | Module 00's topical files; Modules 03–12; Labs 03–13; Projects 01–07 (skeleton READMEs) — every scaffold self-identifies and is tracked in the gap report |
 
 **Not runnable yet:** Labs 03–13 and all projects. Nothing in this repo claims to run unless it has code, commands, validation, tests, and cleanup. Standards: [`CLAUDE.md`](./CLAUDE.md) · [`CONTENT-STANDARD.md`](./CONTENT-STANDARD.md) · build order: [`REPO-BUILD-ROADMAP.md`](./REPO-BUILD-ROADMAP.md).

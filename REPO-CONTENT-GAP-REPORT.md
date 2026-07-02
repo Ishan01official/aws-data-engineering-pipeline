@@ -2,7 +2,7 @@
 
 The audited inventory of what is real versus scaffolded. Every gap is classified **Critical / High / Medium / Low** by its impact on a learner's path to job-readiness. This report is the single source of truth for repo status; the [build roadmap](./REPO-BUILD-ROADMAP.md) sequences the work.
 
-**Last audit:** 2026-07-02. Method: full-tree scan for gap markers (`TODO`, `scaffold`, `skeleton`, `planned`, `placeholder`, `example-only`, `pending`, `coming soon`, `not implemented`, `TBD`) plus manual depth review of non-marker files, plus execution of tests and `cdk synth`.
+**Last audit:** 2026-07-02 (Phase 3 pass). Method: full-tree scan for gap markers (`TODO`, `scaffold`, `skeleton`, `planned`, `placeholder`, `example-only`, `pending`, `coming soon`, `not implemented`, `TBD`) plus manual depth review of non-marker files, plus execution of tests (69 passing) and `cdk synth` on both stacks.
 
 ---
 
@@ -17,13 +17,13 @@ The audited inventory of what is real versus scaffolded. Every gap is classified
 | **Module 02 S3 Lake** | ✅ **Complete** — all 15 files real, incl. naming/compression/inventory/anti-patterns and 6 diagrams |
 | Modules 03–12 | ❌ ~150 stub files (self-marked scaffolds) |
 | **Lab 01** | ✅ **Complete and runnable** — CDK 5-bucket stack (synth-verified), 5 scripts, tracked sample data, 47 passing tests, validation, cleanup |
-| Lab 02 | ⚠️ README written + GlueCatalogStack synth-verified; **not yet executed end-to-end against AWS** |
+| Lab 02 | ⚠️ **Code-complete, synth-verified only** — per-entity crawler targets, CSV header classifier, least-privilege role, 15 automated tests (template assertions + validation logic), full deploy/run/validate/cleanup commands, and a manual verification checklist in the lab README (§12). Needs one live-account run to remove the banner |
 | Labs 03–13 | ❌ Scaffold READMEs (~144 words each) |
 | Projects 01–06 | ❌ Scaffold READMEs |
 | Project 07 (capstone) | ⚠️ Outline only |
-| CDK | ✅ DataLakeStack + GlueCatalogStack synth-verified; all other stacks not written |
+| CDK | ✅ DataLakeStack + GlueCatalogStack synth-verified **and covered by template assertion tests** (`tests/infra/`); all other stacks not written |
 | `src/` code | ✅ Lambda handler, glue transform (unit-tested core), utils, quality checks exist with tests; ⚠️ 2 tracked TODOs in `src/lambda/handler.py` (quarantine copy + SNS publish wiring, planned for Lab 05) |
-| Tests | ✅ 47 passing (`pytest tests/`) — layout, schema, scripts, transform, utils, quality |
+| Tests | ✅ 69 passing (`pytest tests/`) — layout, schema, scripts, transform, utils, quality, catalog-validation logic, CDK template assertions |
 | Sample data | ✅ Tracked in git (gitignore fixed this pass), matches documented schema, referentially consistent |
 
 ## 2. What is already good
@@ -38,7 +38,7 @@ The audited inventory of what is real versus scaffolded. Every gap is classified
 ### Critical — blocks the core learn-by-building path
 - **Modules 04 (Glue/batch) and 03 (ingestion) real content** — the spine of exam Domain 1 and of the pipeline itself. All stubs.
 - **Labs 03 (Glue ETL) and 04 (Athena)** — without them the lake built in Lab 01 is never transformed or queried. Scaffolds only.
-- **Lab 02 end-to-end verification** — written and synth-verified but must be executed against a real account before its "runnable" claim is unqualified. (Its README currently says "complete and runnable"; see §14.)
+- **Lab 02 live-account run** — the code, commands, tests, and cleanup are complete (Phase 3 pass fixed a real mixed-schema design flaw via entity-level crawler targets, added a CSV header classifier for the all-strings header bug, and shipped `scripts/validate_glue_catalog.py` + 15 tests). This machine has no AWS CLI/credentials, so the lab is honestly marked **synth-verified only** with an 8-step manual checklist in its README (§12). One sandbox run closes this item.
 
 ### High — needed for practitioner/production competence
 - Labs 05–07 (Lambda trigger, EventBridge, Step Functions) + their CDK stacks (IamStack, LambdaStack, OrchestrationStack).
@@ -81,7 +81,7 @@ Labs 03–13 have no verified deploy sequences (Lab 02's exist, pending executio
 
 ## 9. Missing tests
 
-Integration tests (deployed-stack smoke tests); CDK assertion tests; data-quality tests beyond the current unit set; contract tests for future Glue jobs.
+Integration tests (deployed-stack smoke tests); data-quality tests beyond the current unit set; contract tests for future Glue jobs. CDK assertion tests were **added this pass** (`tests/infra/`, 14 tests over both stacks) and are no longer a gap.
 
 ## 10. Missing diagrams
 
@@ -89,7 +89,7 @@ Modules 03–12 diagrams (arrive with their content); polished AWS-icon exports 
 
 ## 11. Missing labs
 
-Labs 03–13 (scaffolds). Lab 02 written, pending end-to-end verification.
+Labs 03–13 (scaffolds). Lab 02 is complete in code/commands/tests/cleanup; only the live-account verification run remains.
 
 ## 12. Missing cleanup instructions
 
@@ -102,7 +102,7 @@ Modules 03–12 production sections (arrive with content). Module 11 (CI/CD, ide
 ## 14. README claims that overpromise vs actual content
 
 - ✅ Root README status section is accurate after this pass (states exactly: Modules 01–02 + Lab 01 complete; Lab 02 pending verification; the rest scaffolded).
-- ⚠️ **`labs/lab-02-glue-crawler-catalog/README.md` opens with "Complete and runnable"** — synth-verified but not yet executed against AWS. Mitigated: labs/README.md status table marks it "pending end-to-end verification." Resolve by running it (first item of the next pass).
+- ✅ **Lab 02 claim fixed:** its README now opens with an explicit "synth-verified only" banner, states exactly what is and isn't verified, and includes the manual verification checklist. No fake runnable claim remains.
 - ✅ `infra/cdk/README.md` outdated "SKELETON" claim — **fixed this pass** (it under-promised: the stack is real and synth-verified).
 - No other overpromises found in the scan.
 
@@ -110,4 +110,4 @@ Modules 03–12 production sections (arrive with content). Module 11 (CI/CD, ide
 
 ## How to read progress
 
-Completed scope only grows: an item leaves this report when its content is real, its commands run, its tests pass, and its cleanup exists. Next per the [roadmap](./REPO-BUILD-ROADMAP.md): verify Lab 02 end-to-end, then Phase 4 (Glue ETL + Lab 03).
+Completed scope only grows: an item leaves this report when its content is real, its commands run, its tests pass, and its cleanup exists. Next per the [roadmap](./REPO-BUILD-ROADMAP.md): one live-account run of Lab 02's checklist (its README §12), then Phase 4 (Glue ETL + Lab 03).

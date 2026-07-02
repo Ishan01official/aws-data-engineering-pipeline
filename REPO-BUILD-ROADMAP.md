@@ -37,10 +37,10 @@ The plan that takes this repo from a strong foundation to a complete field guide
 
 - **Goal:** the metadata layer — crawler, catalog, partitions — verified end-to-end.
 - **Files to update:** Lab 02 README (written), `04-batch-processing/` catalog pages, `infra/cdk/stacks/glue_catalog_stack.py` (written, synth-verified).
-- **Code to add:** none major; possible crawler config hardening after the live run.
-- **Tests to add:** CDK assertion test for the Glue stack; post-crawl validation script (table + partition count check).
-- **Diagrams to add:** crawler flow, catalog-as-contract.
-- **Definition of done:** Lab 02 executed against a real account (crawl → table visible → partitions correct → cleanup), README claim unqualified, gap report updated.
+- **Code added ✅:** entity-level crawler targets (fixes a real mixed-schema design flaw), CSV header classifier, input validation, `scripts/validate_glue_catalog.py`.
+- **Tests added ✅:** 14 CDK template assertions covering both stacks (`tests/infra/`), 8 catalog-validation unit tests.
+- **Diagrams added ✅:** per-entity crawler flow in the lab README.
+- **Definition of done:** ☐ Lab 02 executed against a real account per its README §12 checklist (crawl → 3 tables → partitions → Athena row → re-crawl idempotence → cleanup), banner removed, gap report updated. Everything else ✅.
 
 ## Phase 4 — Glue ETL PySpark and Lab 03
 
@@ -155,4 +155,4 @@ The plan that takes this repo from a strong foundation to a complete field guide
 
 ## Current position
 
-**Phases 0–2 complete** (verified this pass: 47 tests green, both stacks synth). **Phase 3 is next:** run Lab 02 end-to-end against a real account. Do not start Phase 4 until Lab 02's runnable claim is unqualified.
+**Phases 0–2 complete.** **Phase 3 code-complete:** 69 tests green (incl. CDK template assertions), both stacks synth, crawler redesigned to entity-level targets + header classifier, catalog validation script shipped. Only the live-account run of Lab 02's §12 checklist remains. Do not start Phase 4 until that run passes.

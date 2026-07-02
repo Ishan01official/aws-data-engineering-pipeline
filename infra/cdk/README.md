@@ -7,7 +7,7 @@ Infrastructure-as-code for the data platform. **Every deploy creates real, billa
 | Stack | Status | Creates | Used by |
 |---|---|---|---|
 | `DataLakeStack` | ✅ **Implemented, synth-verified** | 5 S3 buckets: raw, bronze, silver, gold, Athena results — each with SSE encryption, versioning (except results), Block Public Access, TLS-only bucket policy, lifecycle rules, tags | [Lab 01](../../labs/lab-01-s3-data-lake/) |
-| `GlueCatalogStack` | ⚠️ Written, not yet lab-verified | Glue database + crawler over the raw bucket | Lab 02 (in progress) |
+| `GlueCatalogStack` | ✅ Implemented, synth-verified, template-tested (`tests/infra/`) | Glue database `retail_lake`, CSV header classifier, least-privilege crawler role, crawler with one S3 target per entity | [Lab 02](../../labs/lab-02-glue-crawler-catalog/) — synth-verified only; live run pending |
 | IAM / Lambda / Step Functions / Kinesis / Redshift stacks | ❌ Not written yet | — | Later labs — tracked in [REPO-CONTENT-GAP-REPORT](../../REPO-CONTENT-GAP-REPORT.md) |
 
 No AWS account ID or user-specific value is hardcoded anywhere. Bucket names get an `{account}-{region}` suffix resolved at deploy time; account/region can be passed via CDK context (`-c account=... -c region=...`) or fall back to your CLI configuration.
