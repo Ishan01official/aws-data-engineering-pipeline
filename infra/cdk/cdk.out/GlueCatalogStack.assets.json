@@ -1,0 +1,20 @@
+{
+  "version": "54.0.0",
+  "files": {
+    "75dac538b7d17359f15c6e99dc37000e2817c809e478652009c7ceb29c78e073": {
+      "displayName": "GlueCatalogStack Template",
+      "source": {
+        "path": "GlueCatalogStack.template.json",
+        "packaging": "file"
+      },
+      "destinations": {
+        "current_account-current_region-44ca2987": {
+          "bucketName": "cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}",
+          "objectKey": "75dac538b7d17359f15c6e99dc37000e2817c809e478652009c7ceb29c78e073.json",
+          "assumeRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-file-publishing-role-${AWS::AccountId}-${AWS::Region}"
+        }
+      }
+    }
+  },
+  "dockerImages": {}
+}

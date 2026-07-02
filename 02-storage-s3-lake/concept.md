@@ -98,3 +98,52 @@ Treating raw as mutable; over-partitioning into tiny files; leaving data as CSV 
 - **Partition granularity** — daily vs hourly, trading query latency against file count.
 - **One bucket with `source=`/`entity=` prefixes vs many buckets** — simplicity vs blast-radius isolation.
 - **Plain Parquet lake vs Iceberg lakehouse** — reach for Iceberg when you need ACID upserts, schema evolution, or time-travel; the cost is added tooling maturity. → Module 09.
+
+## File naming strategy
+
+Objects inside a partition should follow a deterministic, sortable convention:
+
+```
+<entity>_<YYYY_MM_DD>[_<part-number>][_<run-id>].<ext>
+orders_2026_07_01.csv                      # single daily extract
+orders_2026_07_01_part-0003.parquet        # one of N parts
+```
+
+Rules that pay off later:
+- **Deterministic names for deterministic data.** A re-run of the same day produces the same key and *overwrites* — that is what makes re-runs idempotent instead of duplicating data.
+- **Embed the date in the filename too**, not just the prefix. Files get downloaded, moved, and attached to tickets; a file named `data.csv` is anonymous the moment it leaves S3.
+- **No spaces, no uppercase surprises, no special characters.** Keys are case-sensitive; URL-encoding bites tools.
+- **Never encode secrets or PII in keys.** Keys appear in logs, inventories, and access logs everywhere.
+- Streaming writers (Firehose) add timestamps/IDs automatically — that's fine, because streaming data is append-only; determinism matters for *re-runnable batch* writes.
+
+## Compression
+
+Compression cuts storage cost *and* scan cost (Athena bills on compressed bytes read).
+
+| Codec | Traits | Use |
+|---|---|---|
+| **Snappy** | Fast, moderate ratio, splittable inside Parquet | Default inside Parquet/ORC |
+| **gzip** | Better ratio, slower, **not splittable** as a bare .csv.gz | Raw text file transfer; small files |
+| **zstd** | Better ratio than gzip at near-Snappy speed | Modern default where supported |
+| none | — | Only tiny files or already-compressed media |
+
+The trap: one giant `.csv.gz` file cannot be split, so one Spark task decompresses it alone — a 10 GB gzip file serializes your whole cluster. Parquet avoids this: compression is applied per column chunk internally, so files stay splittable. Practical rule: **raw zone = whatever the source sends (often gzip CSV); silver/gold = Parquet with Snappy or zstd.**
+
+## S3 inventory and access logs
+
+Two built-in features that answer questions a lake operator asks constantly:
+
+- **S3 Inventory** — a scheduled (daily/weekly) manifest of every object in a bucket: key, size, storage class, encryption status, version info — delivered as Parquet/CSV to a bucket you choose, queryable with Athena. Use it for: finding small-file explosions, auditing encryption coverage, reconciling object counts against expectations, and lifecycle planning. Listing a billion-object bucket with `ListObjects` is slow and costs per request; Inventory is the scalable answer.
+- **S3 server access logs** (or CloudTrail data events) — per-request logs: who requested which key, when, from where, with what result. Access logs are cheap and delivered to a bucket (best-effort); CloudTrail data events are structured and integrate with EventBridge but cost per event. Use access logs for traffic analysis, CloudTrail for compliance-grade audit.
+
+## Data lake anti-patterns
+
+The failure modes that turn a lake into a swamp — each is expanded in [mistakes-to-avoid.md](./mistakes-to-avoid.md):
+
+1. **The dumping ground** — data lands with no zones, no naming convention, no catalog entry, no owner. Six months later nobody can say what's trustworthy.
+2. **The mutable raw zone** — jobs "fix" raw data in place; replays now produce different answers than the original run and lineage is fiction.
+3. **CSV forever** — analytics runs on raw CSV for years because conversion "never made the sprint." Every query pays full scan cost.
+4. **Partition-by-everything** — five levels of partitioning to make queries "fast," producing millions of empty/tiny partitions that make everything slow.
+5. **The single god-bucket with `s3:*` roles** — no blast-radius isolation; any job can destroy anything.
+6. **Catalog drift** — tables exist in S3 but not the catalog, or catalog schemas no longer match files. The catalog must be the enforced contract, not a suggestion.
+7. **No lifecycle discipline** — versioned buckets accumulating years of non-current versions and Athena results nobody expires.

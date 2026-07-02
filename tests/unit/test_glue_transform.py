@@ -7,7 +7,7 @@ from glue_jobs.bronze_to_silver_orders import clean_orders_records
 
 GOOD = {"order_id": "O1", "customer_id": "C1", "product_id": "P1",
         "order_ts": "2026-07-01T09:00:00Z", "quantity": "2", "unit_price": "10.0",
-        "currency": "USD", "channel": "web", "region": "north"}
+        "currency": "USD", "status": "COMPLETED"}
 
 
 def test_happy_path_derives_fields():
@@ -25,9 +25,9 @@ def test_drops_missing_keys():
 
 
 def test_dedupes_on_order_id():
-    out = clean_orders_records([GOOD, dict(GOOD, region="south")])
+    out = clean_orders_records([GOOD, dict(GOOD, status="PENDING")])
     assert len(out) == 1
-    assert out[0]["region"] == "north"  # first kept
+    assert out[0]["status"] == "COMPLETED"  # first kept
 
 
 def test_drops_non_numeric_and_nonpositive():
@@ -38,3 +38,11 @@ def test_drops_non_numeric_and_nonpositive():
 
 def test_drops_row_without_timestamp():
     assert clean_orders_records([dict(GOOD, order_ts="")]) == []
+
+
+def test_status_normalized_and_defaulted():
+    out = clean_orders_records([dict(GOOD, status="completed")])
+    assert out[0]["status"] == "COMPLETED"
+    row = dict(GOOD)
+    del row["status"]
+    assert clean_orders_records([row])[0]["status"] == "UNKNOWN"

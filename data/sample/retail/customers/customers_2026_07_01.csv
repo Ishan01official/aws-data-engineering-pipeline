@@ -1,0 +1,11 @@
+customer_id,customer_name,email,country,signup_date,customer_segment
+C0001,Ava Sharma,ava.sharma@example.com,IN,2024-03-11,loyal
+C0002,Liam Patel,liam.patel@example.com,US,2025-01-22,new
+C0003,Noah Khan,noah.khan@example.com,GB,2023-11-05,loyal
+C0004,Mia Fernandez,mia.fernandez@example.com,ES,2025-06-30,new
+C0005,Ethan Nguyen,ethan.nguyen@example.com,AU,2024-08-17,regular
+C0006,Zara Ahmed,zara.ahmed@example.com,AE,2024-12-02,regular
+C0007,Lucas Mueller,lucas.mueller@example.com,DE,2023-05-19,loyal
+C0008,Ines Rossi,ines.rossi@example.com,IT,2025-02-14,new
+C0009,Kenji Tanaka,kenji.tanaka@example.com,JP,2024-10-08,regular
+C0010,Priya Iyer,priya.iyer@example.com,IN,2026-01-27,new

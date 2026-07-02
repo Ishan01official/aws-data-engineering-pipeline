@@ -9,10 +9,13 @@ venv/
 *.tfstate
 *.tfstate.backup
 .terraform/
-# Data — never commit data into the lake repo
+# Data — never commit real or generated lake data.
+# The tiny FAKE sample CSVs under data/sample/ ARE tracked on purpose:
+# Lab 01 and the unit tests depend on them.
 *.parquet
-*.csv
-data/
+local-lake/
+data/local/
+data/generated/
 # OS / editor
 .DS_Store
 .idea/

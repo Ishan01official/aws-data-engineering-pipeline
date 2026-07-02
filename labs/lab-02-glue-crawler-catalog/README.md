@@ -1,6 +1,6 @@
 # Lab 02 — Catalog the Data Lake with a Glue Crawler
 
-Complete and runnable. You'll point an AWS Glue crawler at the raw zone from Lab 01, have it auto-discover the schema and partitions, and end up with a queryable table in the Glue Data Catalog. This is the metadata layer every query engine (Athena, Redshift Spectrum, EMR) reads.
+**Status: written and synth-verified; end-to-end AWS verification pending** (see [REPO-CONTENT-GAP-REPORT](../../REPO-CONTENT-GAP-REPORT.md)). You'll point an AWS Glue crawler at the raw zone from Lab 01, have it auto-discover the schema and partitions, and end up with a queryable table in the Glue Data Catalog. This is the metadata layer every query engine (Athena, Redshift Spectrum, EMR) reads.
 
 **Prerequisite:** finish [Lab 01](../lab-01-s3-data-lake/) first — this lab crawls the data Lab 01 uploaded.
 

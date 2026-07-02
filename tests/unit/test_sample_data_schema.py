@@ -10,17 +10,17 @@ EXPECTED = {
     "orders": (
         "orders/orders_2026_07_01.csv",
         ["order_id", "customer_id", "product_id", "order_ts", "quantity",
-         "unit_price", "currency", "channel", "region"],
+         "unit_price", "currency", "status"],
     ),
     "customers": (
         "customers/customers_2026_07_01.csv",
-        ["customer_id", "first_name", "last_name", "email", "signup_date",
-         "segment", "region"],
+        ["customer_id", "customer_name", "email", "country", "signup_date",
+         "customer_segment"],
     ),
     "products": (
         "products/products_2026_07_01.csv",
-        ["product_id", "product_name", "category", "subcategory", "list_price",
-         "currency", "active"],
+        ["product_id", "product_name", "category", "brand", "list_price",
+         "currency"],
     ),
 }
 

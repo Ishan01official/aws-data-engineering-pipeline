@@ -20,4 +20,12 @@ Thirteen hands-on labs. Each is self-contained and follows the same template: **
 | 12 | end-to-end-production-pipeline | all | Wire the pieces into one pipeline |
 | 13 | complex-architect-project | 09, 12 | Design + build an architect-level platform |
 
-Each lab folder currently contains a README scaffold marked TODO where deep steps are pending; they are built to full depth module-by-module alongside their modules.
+## Honest status
+
+| Lab | Status |
+|---|---|
+| **01 — S3 data lake** | ✅ Complete and runnable: deployable CDK, working scripts, 47 passing tests, validation, cleanup |
+| **02 — Glue crawler** | ⚠️ Written; CDK stack synth-verified; end-to-end AWS run pending |
+| 03–13 | ❌ Scaffold READMEs only — not runnable yet; tracked in [REPO-CONTENT-GAP-REPORT](../REPO-CONTENT-GAP-REPORT.md) |
+
+Labs are built depth-first in the priority order defined in [CLAUDE.md](../CLAUDE.md). A lab is only marked runnable when its code, deployment commands, validation, tests, and cleanup all exist and have been executed.

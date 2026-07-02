@@ -1,58 +1,113 @@
 # Repo Content Gap Report
 
-Audited inventory of what is real vs scaffolded, with each gap classified **Critical / High / Medium / Low**. Severity reflects impact on a learner's path to job-readiness and the acceptance criteria, not raw file count.
+The audited inventory of what is real versus scaffolded. Every gap is classified **Critical / High / Medium / Low** by its impact on a learner's path to job-readiness. This report is the single source of truth for repo status; the [build roadmap](./REPO-BUILD-ROADMAP.md) sequences the work.
 
-Last audit: this pass. Method: scanned all `.md`/`.py` for gap markers (`TODO`, `SKELETON`, `scaffold`, `example-only`, `pending`) and reviewed non-marker files for depth.
+**Last audit:** 2026-07-02. Method: full-tree scan for gap markers (`TODO`, `scaffold`, `skeleton`, `planned`, `placeholder`, `example-only`, `pending`, `coming soon`, `not implemented`, `TBD`) plus manual depth review of non-marker files, plus execution of tests and `cdk synth`.
 
-## Scorecard
+---
 
-| Area | Complete | Scaffolded | Severity of remaining |
-|---|---|---|---|
-| Root docs | 11/11 | 0 | — |
-| Module 00 Foundations | Yes | — | — |
-| Module 02 S3 Lake | Yes (9 files) | topical extras | Low |
-| Modules 01, 03–12 | — | ~180 files | **Critical/High** |
-| Labs | 01 done | 02–13 | **High** |
-| Projects | — | 01–07 (+08–11 not yet created) | Medium |
-| CDK stacks | S3 only | ~15 stacks | **High** |
-| Code (src) | scripts + 1 Lambda | glue/streaming/quality/utils/sql | **Critical** |
-| Tests | unit (16 passing) | integration/dq/architecture | Medium |
-| Papers (docs/papers) | — | 10 papers | Medium |
-| Service encyclopedia | — | ~40 services | **Critical** |
+## 1. Current repo status summary
 
-## Complete and verified (no gaps)
+| Area | Status |
+|---|---|
+| Root docs (README, roadmaps, framework, runbook, use-cases, cert map, glossary, etc.) | ✅ Real content, expanded this pass |
+| CLAUDE.md / CONTENT-STANDARD.md | ✅ Written |
+| Module 00 Foundations | ⚠️ README + architect-notes + glossary real; **14 topical files are stubs** |
+| **Module 01 AWS Core Services** | ✅ **Complete this pass** — 9 real pages (IAM/STS, VPC/SG/NACL, KMS/Secrets/SSM, CloudWatch/CloudTrail, SQS/SNS, EventBridge, Lambda, Step Functions) |
+| **Module 02 S3 Lake** | ✅ **Complete** — all 15 files real, incl. naming/compression/inventory/anti-patterns and 6 diagrams |
+| Modules 03–12 | ❌ ~150 stub files (self-marked scaffolds) |
+| **Lab 01** | ✅ **Complete and runnable** — CDK 5-bucket stack (synth-verified), 5 scripts, tracked sample data, 47 passing tests, validation, cleanup |
+| Lab 02 | ⚠️ README written + GlueCatalogStack synth-verified; **not yet executed end-to-end against AWS** |
+| Labs 03–13 | ❌ Scaffold READMEs (~144 words each) |
+| Projects 01–06 | ❌ Scaffold READMEs |
+| Project 07 (capstone) | ⚠️ Outline only |
+| CDK | ✅ DataLakeStack + GlueCatalogStack synth-verified; all other stacks not written |
+| `src/` code | ✅ Lambda handler, glue transform (unit-tested core), utils, quality checks exist with tests; ⚠️ 2 tracked TODOs in `src/lambda/handler.py` (quarantine copy + SNS publish wiring, planned for Lab 05) |
+| Tests | ✅ 47 passing (`pytest tests/`) — layout, schema, scripts, transform, utils, quality |
+| Sample data | ✅ Tracked in git (gitignore fixed this pass), matches documented schema, referentially consistent |
 
-Root: `README`, `ROADMAP`, `LEARNING-PATH`, `CERTIFICATION-MAPPING`, `COST-OPTIMIZATION`, `TROUBLESHOOTING-RUNBOOK`, `SECURITY-GOVERNANCE`, `INDUSTRY-USE-CASES`, `LATEST-AWS-UPDATES`, `GLOSSARY`, `SERVICE-DECISION-FRAMEWORK`.
-Module 00 (README, architect-notes, glossary). Module 02 (all 9 core files, real content + diagrams).
-Lab 01 (runnable: deployable CDK S3 stack, 4 scripts, sample data, 16 passing tests, cleanup).
-`infra/cdk/` S3 data lake stack (synth-verified). `scripts/` (all run). `tests/unit/` (16 pass).
+## 2. What is already good
 
-## Gaps by severity
+- **Lab 01 is genuinely end-to-end:** deployable CDK (5 buckets with encryption/versioning/BPA/TLS/lifecycle/tags, no hardcoded account IDs), scripts with argparse/logging/`--region`/`--profile`/`--dry-run`, deterministic key layout shared via `scripts/lake_layout.py`, validation with non-zero exit on failure, cleanup, and tests.
+- **Modules 01 and 02** meet the [CONTENT-STANDARD](./CONTENT-STANDARD.md): beginner-first, internals, runnable snippets, security/cost/troubleshooting/architect/interview/cert sections, Mermaid diagrams.
+- **Root reference docs** are deep: 18-comparison decision framework (incl. 5 S3 design decisions with the full 9-field format), 25+ runbooks (incl. 11 S3-lake runbooks in symptom/causes/checks/fix/prevention/senior format), industry deep dives, and a per-service DEA-C01 map with original scenario questions.
+- **Honesty machinery:** stubs self-identify, the README status section matches reality, and this report is regenerated per pass.
 
-### Critical (blocks the core job-ready path)
-- **`src/utils/` shared code layer** — missing. Everything else (Lambdas, Glue jobs, quality checks) should import logging/config/s3/errors from here. Built this pass.
-- **`src/quality/` data-quality checks** — missing. Schema, null, duplicate, freshness, reconciliation. Partially built this pass.
-- **`src/glue_jobs/` transforms** — missing. raw→bronze→silver→gold PySpark. Started this pass.
-- **Modules 01 (IAM/core) and 03–04 (ingestion/Glue) concept+code** — the spine of Domain 1. Scaffolded.
-- **Service encyclopedia** — no per-service pages following the 16-section template yet.
+## 3. What is missing (by severity)
 
-### High (needed for practitioner + production competence)
-- **Labs 02–13** — scaffolds only. Lab 02 built this pass.
-- **CDK stacks** — IAM, Lambda, Glue (db/crawler/job), EventBridge, Step Functions, SNS, SQS DLQ, Kinesis, Firehose, Athena, CloudWatch alarms, OIDC. Only S3 exists.
-- **Modules 05–08** (streaming, orchestration, Redshift, governance) topical files.
+### Critical — blocks the core learn-by-building path
+- **Modules 04 (Glue/batch) and 03 (ingestion) real content** — the spine of exam Domain 1 and of the pipeline itself. All stubs.
+- **Labs 03 (Glue ETL) and 04 (Athena)** — without them the lake built in Lab 01 is never transformed or queried. Scaffolds only.
+- **Lab 02 end-to-end verification** — written and synth-verified but must be executed against a real account before its "runnable" claim is unqualified. (Its README currently says "complete and runnable"; see §14.)
 
-### Medium (depth, breadth, senior polish)
-- **Projects 01–11** — 01–07 scaffolded; 08–11 (finance, healthcare, IoT, SaaS) not created.
-- **`docs/papers/`** — 10 architecture papers not created.
-- **Modules 09, 11, 12** (patterns, production eng, architect playbook) topical files.
-- **Integration / data-quality / architecture tests.**
+### High — needed for practitioner/production competence
+- Labs 05–07 (Lambda trigger, EventBridge, Step Functions) + their CDK stacks (IamStack, LambdaStack, OrchestrationStack).
+- Module 06 (orchestration) and Module 11 (production engineering) content.
+- `src/lambda/handler.py` TODOs: quarantine copy + SNS publish (tracked; land with Lab 05).
+- Module 00's 14 topical stub files (the module README is strong; the stubs should be filled or removed).
 
-### Low (nice-to-have, non-blocking)
-- Module 02 topical extras (industry-use-cases, monitoring, service-decision, certification-notes, mistakes-to-avoid) — the 9 core files are done; these 5 remain scaffolded.
-- Notebooks.
+### Medium — depth and breadth
+- Modules 05, 07, 08 (streaming, Redshift, governance) + Labs 08–11 + their stacks.
+- Projects 01–07 as real builds; docs/papers (10 architecture papers) not started; docs/decision-records empty of ADRs.
+- Integration tests and infra assertion tests (CDK `assertions` on the stacks).
 
-## README honesty check
-Root README now carries a **Content status** section and links this report. Lab map marks Lab 01 as the only fully-runnable lab. No current overpromise; this pass keeps it honest by updating status as content lands.
+### Low — polish
+- Modules 09, 10, 12 topical files (root-level equivalents already cover much of this).
+- Notebooks directory content; polished draw.io exports in docs/diagrams.
 
-## How progress is tracked
-Each pass shrinks the "Scaffolded" column and moves items out of Critical/High. The [build roadmap](./REPO-BUILD-ROADMAP.md) sequences the work into phases.
+## 4. Files with weak content
+
+- `projects/project-0{1..6}-*/README.md` (~70 words each) and `labs/lab-{03..13}-*/README.md` (~144 words each) — outline-only.
+- `00-foundations/{concept,cost,deployment,...}.md` — 14 five-line stubs alongside a strong README.
+
+## 5. Files with TODO/scaffold/skeleton markers (tracked)
+
+- ~150 module stub files across 00, 03–12 (each self-marked `Status: TODO — scaffolded`).
+- 11 lab scaffolds + 6 project scaffolds (self-marked).
+- `src/lambda/handler.py` — 2 TODOs (quarantine + SNS), scheduled for Lab 05.
+- All are **intentional and tracked here**; no untracked markers exist in completed scope (Modules 01–02, Lab 01, scripts, CDK, tests, root docs).
+
+## 6. Missing service explanations
+
+DMS, DataSync, Transfer Family, AppFlow, API Gateway (Module 03); Glue ETL/crawlers/bookmarks/Data Quality, EMR, EMR Serverless, Athena internals (Module 04); Kinesis Data Streams/Firehose, MSK, Managed Flink (Module 05); MWAA, Glue Workflows (Module 06); Redshift (Module 07); Lake Formation, Macie (Module 08); DynamoDB, OpenSearch, QuickSight (referenced, unexplained).
+
+## 7. Missing code
+
+Glue jobs beyond `bronze_to_silver_orders` (silver→gold, customers/products entities); streaming producers/consumers; Redshift SQL/DDL; Lake Formation grants as code; CDK stacks for IAM/Lambda/Glue-job/StepFunctions/EventBridge/SNS/SQS/Kinesis/Athena-workgroup/CloudWatch-alarms/OIDC.
+
+## 8. Missing deployment commands
+
+Labs 03–13 have no verified deploy sequences (Lab 02's exist, pending execution). GitHub Actions deploy workflow exists (`cdk-deploy-dev.yml`) but is not yet documented end-to-end in Module 11.
+
+## 9. Missing tests
+
+Integration tests (deployed-stack smoke tests); CDK assertion tests; data-quality tests beyond the current unit set; contract tests for future Glue jobs.
+
+## 10. Missing diagrams
+
+Modules 03–12 diagrams (arrive with their content); polished AWS-icon exports in `docs/diagrams/` (instructions exist in `docs/aws-icons/`).
+
+## 11. Missing labs
+
+Labs 03–13 (scaffolds). Lab 02 written, pending end-to-end verification.
+
+## 12. Missing cleanup instructions
+
+Complete for Labs 01–02 and the CDK README. Each future lab must ship cleanup per [CLAUDE.md](./CLAUDE.md); labs 03–13 currently have none (they have no steps yet).
+
+## 13. Missing production notes
+
+Modules 03–12 production sections (arrive with content). Module 11 (CI/CD, idempotency, reconciliation, SLAs) is the concentrated gap.
+
+## 14. README claims that overpromise vs actual content
+
+- ✅ Root README status section is accurate after this pass (states exactly: Modules 01–02 + Lab 01 complete; Lab 02 pending verification; the rest scaffolded).
+- ⚠️ **`labs/lab-02-glue-crawler-catalog/README.md` opens with "Complete and runnable"** — synth-verified but not yet executed against AWS. Mitigated: labs/README.md status table marks it "pending end-to-end verification." Resolve by running it (first item of the next pass).
+- ✅ `infra/cdk/README.md` outdated "SKELETON" claim — **fixed this pass** (it under-promised: the stack is real and synth-verified).
+- No other overpromises found in the scan.
+
+---
+
+## How to read progress
+
+Completed scope only grows: an item leaves this report when its content is real, its commands run, its tests pass, and its cleanup exists. Next per the [roadmap](./REPO-BUILD-ROADMAP.md): verify Lab 02 end-to-end, then Phase 4 (Glue ETL + Lab 03).

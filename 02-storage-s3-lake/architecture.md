@@ -64,6 +64,38 @@ flowchart LR
 
 Data gets more refined and more valuable left-to-right; it also gets smaller and more query-optimized. The transformations between zones are Glue/Spark jobs (Module 04); this module is about the *storage* those jobs read from and write to.
 
+## S3 event trigger flow
+
+```mermaid
+flowchart LR
+    UP[File lands in raw/] --> EVT{S3 event}
+    EVT -->|native notification| LAM[Lambda validate]
+    EVT -->|EventBridge enabled| EB{{EventBridge rules}}
+    EB -->|prefix = entity=orders/| SF[Step Functions pipeline]
+    EB -->|any raw/ object| LOG[Audit consumer]
+    LAM -->|invalid| QUAR[(quarantine/ prefix)]
+    LAM -->|invalid| SNS[SNS alert]
+```
+
+One landing event can start validation, the pipeline, and auditing independently. Native S3 notifications allow one destination per prefix/event pattern; routing through EventBridge (or SNS fan-out) removes that limit — see [Module 01 · eventbridge.md](../01-aws-core-services/eventbridge.md).
+
+## Failure and cleanup flow
+
+```mermaid
+flowchart TB
+    JOB[Zone-to-zone job] -->|success| NEXT[Next zone]
+    JOB -->|validation fails| QUAR[(quarantine/ prefix<br/>bad batch parked)]
+    QUAR --> ALERT[SNS alert + runbook link]
+    ALERT --> FIX[Engineer fixes source/rule]
+    FIX --> REPLAY[Re-run job for the SAME<br/>ingestion_date - idempotent]
+    REPLAY --> JOB
+    subgraph Cleanup[Lab / environment cleanup]
+        EMPTY[Empty buckets<br/>aws s3 rm --recursive] --> DESTROY[cdk destroy DataLakeStack] --> VERIFY[aws s3 ls - confirm nothing remains]
+    end
+```
+
+Failures park data in quarantine instead of deleting it; recovery is a re-run of the same partition, which is safe because writes are deterministic. Cleanup is a first-class flow, not an afterthought — every lab ends with it.
+
 ## Where this sits in the platform
 
 This storage layer is the backbone of the [capstone platform](../projects/project-07-enterprise-data-platform/). Every ingestion source lands in raw; every processing job reads one zone and writes the next; every query engine reads silver or gold. Get these four diagrams into your head and the rest of the platform is "what fills the arrows."

@@ -77,4 +77,10 @@ The small-files problem, over-partitioning, unpartitioned Athena scans blowing u
 | [security.md](./security.md) | Encryption, block-public-access, versioning, least privilege |
 | [cost.md](./cost.md) | Storage classes, lifecycle, scan-cost levers |
 | [troubleshooting.md](./troubleshooting.md) | Small files, partitions not showing, scan cost, schema drift |
+| [monitoring.md](./monitoring.md) | Freshness alarms, Storage Lens, Inventory, access logs |
+| [mistakes-to-avoid.md](./mistakes-to-avoid.md) | The ten storage mistakes that create data swamps |
+| [service-decision.md](./service-decision.md) | The seven storage-layer design decisions, with links to full comparisons |
+| [hands-on-lab.md](./hands-on-lab.md) | Quick-reference command sequence for Lab 01 |
+| [industry-use-cases.md](./industry-use-cases.md) | How the same lake machinery is arranged per industry |
+| [certification-notes.md](./certification-notes.md) | DEA-C01 Domain 2 facts, scenario patterns, and traps |
 | [interview-questions.md](./interview-questions.md) | Beginner → architect Q&A |

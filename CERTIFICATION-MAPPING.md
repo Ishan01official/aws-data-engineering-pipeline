@@ -131,3 +131,79 @@ Domain 1 is the largest single block — prioritize ingestion patterns, Glue ETL
 7. **Week 9:** Module 10 review, scenario questions, and a full official AWS practice exam on SkillBuilder.
 
 > The repo's labs *are* the hands-on the exam assumes you have. Don't skip cleanup — but don't skip the labs either.
+
+---
+
+## Completed-scope deep map: S3, IAM, KMS, CloudWatch, EventBridge, Lambda
+
+The modules below are fully written, so this mapping is specific: what the exam tests, where the repo teaches it, what to do hands-on, and original practice questions (scenario-style, no dumps).
+
+### Amazon S3 & the data lake (Domain 2, with Domain 4 overlap)
+
+- **Exam relevance:** the highest-yield single topic. Storage classes and lifecycle, partitioning and pruning, formats (Parquet/Iceberg vs CSV/JSON), small files, versioning, encryption options, and "Athena can't see the data" scenarios.
+- **Repo:** [Module 02](./02-storage-s3-lake/) (all pages), [certification-notes](./02-storage-s3-lake/certification-notes.md) for the fact list and traps.
+- **Lab:** [Lab 01](./labs/lab-01-s3-data-lake/) — runnable now.
+- **Hands-on task:** deploy Lab 01, upload two different `--ingestion-date` values, then predict — before running — exactly which prefix `validate_s3_layout.py` will check for each. If you can't predict it, re-read [concept.md § Partitioning](./02-storage-s3-lake/concept.md).
+- **Practice:**
+  > *A 3 TB dataset of daily CSV exports is queried in Athena, always filtered to the last 7 days, and costs are high. Rank the two highest-impact changes.*
+  > **Reasoning:** (1) convert to Parquet — columnar + compressed slashes bytes scanned; (2) partition by date so pruning limits scans to 7 partitions. Storage-class changes don't affect scan cost; that's the trap option.
+
+  > *After a nightly load, new data is in S3 but Athena returns yesterday's max date. The crawler runs weekly. What's the immediate fix, and the durable one?*
+  > **Reasoning:** immediate — `MSCK REPAIR TABLE` / `ALTER TABLE ADD PARTITION`. Durable — add partition registration to the load step or enable partition projection; don't couple data freshness to a weekly crawler.
+
+### IAM & STS (Domain 4)
+
+- **Exam relevance:** roles vs users, trust vs permissions policies, least privilege, temporary credentials, cross-account patterns, and the layered evaluation (explicit deny > allow; resource policies; SCPs).
+- **Repo:** [Module 01 · iam.md](./01-aws-core-services/iam.md).
+- **Hands-on task:** run `aws sts get-caller-identity`, then use `aws iam simulate-principal-policy` to test whether your identity could call `s3:DeleteObject` on the Lab 01 raw bucket — and explain which policy produces the result.
+- **Practice:**
+  > *A Glue job assumes its role fine but gets AccessDenied on `s3:GetObject` for `s3://lake/raw/file.csv`, though its policy allows `GetObject` on `arn:aws:s3:::lake/raw/*`. The object is SSE-KMS encrypted. What's missing?*
+  > **Reasoning:** `kms:Decrypt` on the key (in the role policy AND allowed by the key policy). The S3 grant is correct; encrypted access is a two-permission problem.
+
+  > *GitHub Actions must deploy CDK stacks without stored AWS keys. What's the mechanism?*
+  > **Reasoning:** OIDC federation — the workflow exchanges its OIDC token via STS `AssumeRoleWithWebIdentity` for a deploy role whose trust policy pins the repo/branch. No long-lived secrets.
+
+### KMS, Secrets Manager, Parameter Store (Domain 4)
+
+- **Exam relevance:** SSE-S3 vs SSE-KMS vs client-side; envelope encryption; key policy vs IAM; bucket keys for cost; Secrets Manager rotation vs Parameter Store config.
+- **Repo:** [Module 01 · kms.md](./01-aws-core-services/kms.md).
+- **Hands-on task:** run `aws s3api head-object` on a Lab 01 uploaded file and identify the encryption header; explain what would change (permissions and cost) if the bucket moved to SSE-KMS.
+- **Practice:**
+  > *A lake with 800M small objects moved to SSE-KMS and the KMS request bill spiked. Fix without weakening encryption?*
+  > **Reasoning:** enable **S3 bucket keys** — S3 reuses a bucket-level data key, cutting KMS calls ~99%.
+
+  > *DB credentials for a nightly Glue connection must rotate every 30 days automatically. Service?*
+  > **Reasoning:** **Secrets Manager** (rotation is the differentiator); Parameter Store SecureString stores encrypted values but does not rotate them.
+
+### CloudWatch & CloudTrail (Domain 3 + Domain 4)
+
+- **Exam relevance:** logs vs metrics vs alarms; Logs Insights; alarm→SNS wiring; freshness/volume as custom metrics; CloudTrail as the audit answer; data events vs management events.
+- **Repo:** [Module 01 · cloudwatch.md](./01-aws-core-services/cloudwatch.md), [Module 02 · monitoring.md](./02-storage-s3-lake/monitoring.md).
+- **Hands-on task:** create (then delete) a CloudWatch alarm on `NumberOfObjects` for the Lab 01 raw bucket; explain why a *row-count custom metric* would catch failures this alarm can't.
+- **Practice:**
+  > *A pipeline "succeeds" nightly but occasionally writes zero rows. Which monitoring catches it?*
+  > **Reasoning:** a custom volume/freshness metric (rows written per partition) with a floor alarm. Job-status metrics can't see it — the job did succeed.
+
+  > *Security asks who changed a bucket policy last Tuesday. Where do you look?*
+  > **Reasoning:** **CloudTrail** management events (`PutBucketPolicy`) — CloudWatch has operational metrics, not the audit trail.
+
+### EventBridge (Domains 1 & 3)
+
+- **Exam relevance:** event patterns vs schedules; S3→EventBridge; failure-event alerting; at-least-once delivery + DLQs; UTC cron.
+- **Repo:** [Module 01 · eventbridge.md](./01-aws-core-services/eventbridge.md). Lab 06 (in progress — see gap report).
+- **Hands-on task:** write (on paper) the event pattern that matches only `entity=orders` objects created in the Lab 01 raw bucket; validate mentally against the S3 "Object Created" event shape in the module page.
+- **Practice:**
+  > *A pipeline must start within a minute of any orders file landing, and also run a nightly consolidation at 02:00 IST. Design the triggers.*
+  > **Reasoning:** S3→EventBridge rule with a `raw/source=retail/entity=orders/` prefix filter → Step Functions; EventBridge **Scheduler** cron with an explicit `Asia/Kolkata` timezone for the nightly run (plain cron rules are UTC — the trap).
+
+### Lambda (Domains 1 & 3)
+
+- **Exam relevance:** the 15-minute limit as a disqualifier; event sources; concurrency/throttling; retries and DLQs on async invokes; idempotency.
+- **Repo:** [Module 01 · lambda.md](./01-aws-core-services/lambda.md); handler pattern in [`src/lambda/handler.py`](./src/lambda/handler.py). Lab 05 (in progress — see gap report).
+- **Hands-on task:** read the validate-and-route handler in lambda.md and list the three things that make it idempotent and production-safe (client reuse, URL-decoding, deterministic quarantine keys).
+- **Practice:**
+  > *Each arriving file needs a 45-minute transformation. The team proposes S3→Lambda. What do you say?*
+  > **Reasoning:** Lambda caps at 15 minutes — use Lambda only to validate/route, and hand the transform to Glue (via Step Functions). "Chunk it across Lambdas" is the trap answer that trades a limit for an orchestration mess.
+
+  > *An async-invoked Lambda occasionally fails on malformed events, and those events vanish. Fix?*
+  > **Reasoning:** configure a DLQ / failure destination (async invokes retry twice, then discard) and alarm on DLQ depth.

@@ -29,8 +29,11 @@ Cost warning:
 from __future__ import annotations
 
 import argparse
-import sys
+import logging
+
 from pathlib import Path
+
+log = logging.getLogger("validate_s3_layout")
 
 try:
     from lake_layout import ENTITIES, default_filename, raw_key, today_iso, _DATE_RE
@@ -49,16 +52,17 @@ def object_exists(s3, bucket: str, key: str) -> bool:
         raise
 
 
-def validate(bucket: str, ingestion_date: str, profile: str | None) -> int:
+def validate(bucket: str, ingestion_date: str, profile: str | None,
+             region: str | None = None) -> int:
     try:
         import boto3
         from botocore.exceptions import BotoCoreError, ClientError, NoCredentialsError
     except ImportError:
-        print("ERROR: boto3 not installed. `pip install boto3`", file=sys.stderr)
+        log.error("boto3 not installed. `pip install boto3`")
         return 2
 
     session = boto3.Session(profile_name=profile) if profile else boto3.Session()
-    s3 = session.client("s3")
+    s3 = session.client("s3", region_name=region) if region else session.client("s3")
 
     expected = {
         entity: raw_key(entity, ingestion_date, default_filename(entity, ingestion_date))
@@ -73,18 +77,16 @@ def validate(bucket: str, ingestion_date: str, profile: str | None) -> int:
             print(f"[{status}] {entity:9s} s3://{bucket}/{key}")
             all_ok = all_ok and ok
     except NoCredentialsError:
-        print("ERROR: no AWS credentials. Run `aws configure` or pass --profile.",
-              file=sys.stderr)
+        log.error("no AWS credentials. Run `aws configure` or pass --profile.")
         return 2
     except (ClientError, BotoCoreError) as e:
-        print(f"ERROR checking s3://{bucket}: {e}", file=sys.stderr)
+        log.error("checking s3://%s failed: %s", bucket, e)
         return 1
 
     if all_ok:
         print(f"\nAll {len(expected)} expected objects present for {ingestion_date}.")
         return 0
-    print("\nOne or more expected objects are MISSING. Did upload run for this date?",
-          file=sys.stderr)
+    log.error("One or more expected objects are MISSING. Did upload run for this date?")
     return 1
 
 
@@ -94,16 +96,18 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--ingestion-date", default=today_iso(),
                    help="Partition date YYYY-MM-DD (default: today).")
     p.add_argument("--profile", default=None, help="AWS CLI profile (optional).")
+    p.add_argument("--region", default=None,
+                   help="AWS region override (optional; defaults to your CLI config).")
     return p.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
     args = parse_args(argv)
     if not _DATE_RE.match(args.ingestion_date):
-        print(f"ERROR: --ingestion-date must be YYYY-MM-DD, got {args.ingestion_date!r}",
-              file=sys.stderr)
+        log.error("--ingestion-date must be YYYY-MM-DD, got %r", args.ingestion_date)
         return 2
-    return validate(args.bucket, args.ingestion_date, args.profile)
+    return validate(args.bucket, args.ingestion_date, args.profile, region=args.region)
 
 
 if __name__ == "__main__":

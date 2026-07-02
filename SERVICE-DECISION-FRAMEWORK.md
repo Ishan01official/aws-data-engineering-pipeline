@@ -180,3 +180,74 @@ Read the [Foundations five-axis framework](./00-foundations/) first — every de
 | Avoid when | Sustained near-full utilization (premium adds up) | Bursty/idle workloads (you pay for idle) |
 
 **Architect answer:** The crossover is utilization. Serverless bills per-use with a per-unit premium and scales to zero; provisioned bills flat regardless of use. Below ~60–70% sustained utilization, serverless usually wins once you price in the engineer-hours you're *not* spending managing infrastructure. Above it, provisioned's lower per-unit cost wins. Model both with real numbers before committing a steady high-volume workload to serverless. → [Foundations architect-notes](./00-foundations/architect-notes.md).
+
+---
+
+# S3 data lake design decisions
+
+The storage-layer decisions from [Module 02](./02-storage-s3-lake/), each with the full nine-field treatment. These are the choices that are painful to reverse once petabytes and pipelines depend on them.
+
+## S3-1. One bucket vs multiple buckets
+
+**Simple answer:** this repo uses one bucket per zone (raw/bronze/silver/gold/results). Small teams can start with one bucket and zone prefixes; sensitive datasets always get their own bucket.
+
+- **Use one bucket (with prefixes) when:** you're small, datasets share a sensitivity level, and you want one lifecycle/one policy surface to manage.
+- **Use multiple buckets when:** zones need different lifecycle/versioning/keys (they do, quickly), you want IAM statements that read clearly ("this role writes silver"), or compliance demands isolation for specific data.
+- **Cost impact:** none directly — S3 charges per GB/request, not per bucket. Indirect: per-zone lifecycle rules are easier to get right with per-zone buckets, and wrong lifecycle is a real cost.
+- **Performance impact:** none. S3 scales per-prefix, not per-bucket; neither choice is faster.
+- **Operations impact:** multiple buckets = more Terraform/CDK objects but simpler mental model per bucket; one bucket = fewer resources but every policy/lifecycle rule needs careful prefix scoping. Bucket *names* are global and finite per account (soft limit) — bucket-per-dataset doesn't scale to thousands.
+- **Security impact:** the deciding axis. Bucket-level guardrails (Block Public Access, default encryption, bucket policies, per-bucket KMS keys) are simpler and harder to get wrong than prefix-scoped conditions. Blast radius: a misconfigured policy on one zone bucket doesn't expose the others.
+- **Architect answer:** buckets are free isolation — spend them on boundaries that matter (zone, sensitivity, environment/account), not on boundaries that don't (one per table). The layout that ages best: per-zone buckets per environment, plus dedicated buckets for regulated datasets with their own KMS keys.
+- **Interview answer:** "Prefixes for logical organization within a trust boundary, separate buckets across trust boundaries — different zones, sensitivity levels, or environments — because encryption, lifecycle, and public-access controls apply cleanly at bucket level."
+
+## S3-2. raw/bronze/silver/gold vs raw/trusted/curated
+
+**Simple answer:** the names are interchangeable; the zone *contracts* are what matter. Medallion (bronze/silver/gold) is the most widely recognized vocabulary today.
+
+- **Use medallion naming when:** you want vocabulary new hires and vendors already know, and a finer split between "as received" (raw/bronze) and "cleaned" (silver).
+- **Use raw/trusted/curated (or landing/staging/serving) when:** your organization already speaks it — consistency beats fashion.
+- **Cost / performance impact:** zero. This is a naming and contract decision, not a physical one.
+- **Operations impact:** the real risk is *contract drift*, not naming: two teams meaning different things by "silver." Write each zone's contract down (mutability, format, quality guarantees, who reads/writes) and enforce it with IAM.
+- **Security impact:** indirect — clear zone contracts make least-privilege policies writable ("quality-checked PII exists only from silver onward, silver requires the PII key").
+- **Architect answer:** choose one vocabulary, define contracts per zone (raw: immutable, any format, replay source; silver: validated, deduplicated, Parquet, partition-stable; gold: business-defined, SLA-backed), and refuse zone-purpose creep. Whether bronze is a distinct copy of raw or the same thing is a real decision — split them when sources are messy enough to want a typed replay boundary.
+- **Interview answer:** "Medallion and raw/trusted/curated are the same three-layer idea: immutable landing, validated middle, business-ready serving. I care about the contract per layer — mutability, format, quality bar — far more than the labels."
+
+## S3-3. Partitioning by date vs entity vs region
+
+**Simple answer:** partition by what your queries filter on. For almost all lakes that means date innermost, with source/entity above it — exactly this repo's `source=/entity=/ingestion_date=` layout.
+
+- **Use date partitioning when:** always, effectively — batch loads, retention, reprocessing, and most WHERE clauses are date-shaped.
+- **Use entity/source as higher-level partitions when:** one bucket holds many datasets (it keeps tables separable and crawlers sane).
+- **Add region/tenant/category partitions when:** queries *actually* filter on them AND cardinality is low (a few dozen values). Never partition on IDs.
+- **Cost impact:** the biggest scan-cost lever in the lake — pruning means Athena reads one day, not five years. Over-partitioning reverses the gain: tiny files inflate request costs and scan overhead.
+- **Performance impact:** same shape as cost. Rule of thumb: partitions should hold ≥ ~128 MB; if a partition averages a few KB, you've over-partitioned. Multiply the cardinalities of all partition keys — if the product is millions, redesign.
+- **Operations impact:** partition layout is near-immutable — changing it means rewriting data and repointing every consumer. Reprocessing granularity = partition granularity: daily partitions mean you re-run days, not hours.
+- **Security impact:** partitions can align with access boundaries (e.g. `region=` matching data-residency rules, prefix-scoped IAM per region).
+- **Architect answer:** design partitions from the *query workload and the reprocessing unit*, not the data model. Date is the reprocessing unit for batch pipelines, so it's the innermost key. High-cardinality slicing needs are what bucketing, Iceberg hidden partitioning, or a serving database are for.
+- **Interview answer:** "Partition on low-cardinality columns queries filter by — date first. Every additional partition key multiplies folder count, so I add one only when the query pattern proves it and the cardinality stays low."
+
+## S3-4. Event-driven vs scheduled ingestion
+
+**Simple answer:** event-driven (S3 event → pipeline) when freshness matters or arrivals are unpredictable; scheduled when downstream thinks in batch windows. Mature platforms use both: event-driven landing + scheduled consolidation.
+
+- **Use event-driven when:** files arrive irregularly, per-file latency matters ("process within 15 minutes of arrival"), volume is spiky, or producers are external and won't follow your clock.
+- **Use scheduled when:** consumers need "the complete day" semantics, sources publish on a schedule anyway, or you want simple capacity planning and one nightly failure surface.
+- **Cost impact:** event-driven pays per occurrence and scales to zero — cheaper for sparse/spiky arrivals. Scheduled batches amortize job startup over more data — cheaper per GB at steady high volume (Glue jobs have startup overhead per run; 96 tiny event-triggered runs can cost more than 1 daily run).
+- **Performance impact:** event-driven wins freshness (minutes vs the schedule interval). Scheduled wins throughput efficiency and produces right-sized files; per-file event processing tends to produce small files that need compaction later.
+- **Operations impact:** the honest cost of event-driven: "did everything arrive?" has no natural answer — you must build completeness checks, dedupe (events deliver at-least-once), and per-event failure handling (DLQs). Scheduled pipelines get completeness for free ("the 2am run processed everything present") but need catch-up logic when a window is missed.
+- **Security impact:** roughly neutral; event-driven adds trigger-permission surface (resource policies) to audit.
+- **Architect answer:** ask what the *consumer* needs. Dashboards refreshed daily don't justify event plumbing; an ops process acting on file arrival does. The robust hybrid: events trigger validation + landing immediately (cheap, per-file), a scheduled job consolidates/compacts/publishes the day (batch semantics preserved). Beware event storms and recursive triggers — see [Module 01 · eventbridge.md](./01-aws-core-services/eventbridge.md).
+- **Interview answer:** "Event-driven for freshness and spiky arrivals, scheduled for batch-window semantics and per-GB efficiency. My default hybrid: event-driven validate-and-land, scheduled consolidate-and-publish — and idempotent processing either way, since events deliver at-least-once."
+
+## S3-5. Lifecycle policy vs manual cleanup
+
+**Simple answer:** lifecycle policies, always. Manual cleanup is the cleanup that doesn't happen — until it happens to the wrong prefix.
+
+- **Use lifecycle when:** rules are age-based and predictable (transition raw to IA at 30d, Glacier at 90d; expire Athena results at 14d; expire non-current versions). That covers ~95% of lake hygiene.
+- **Use targeted cleanup jobs (not humans with `aws s3 rm`) when:** rules depend on data content ("delete records for erased user X" — a GDPR job), or you're compacting small files (a rewrite, not a deletion).
+- **Cost impact:** lifecycle is free to run and is *the* mechanism matching storage cost to access patterns. Skipping it = paying Standard rates for cold data and storing old versions forever. Minor gotcha: transition requests have a tiny per-object fee, and objects <128 KB shouldn't transition to IA (minimum-size billing).
+- **Performance impact:** none on queries — but remember Glacier-tiered data is *not queryable* by Athena without restore; don't tier data that consumers still scan.
+- **Operations impact:** lifecycle is set-and-audited; manual cleanup is toil plus outage risk. The failure story is always the same: someone runs a recursive delete with the wrong prefix under deadline pressure.
+- **Security impact:** lifecycle expirations are policy, reviewable in IaC and logged; ad-hoc deletes by humans with broad `s3:DeleteObject` are exactly the permission least-privilege says nobody should hold on a source-of-truth bucket.
+- **Architect answer:** encode retention as code — lifecycle rules in the CDK stack, reviewed like schema changes (this repo's [`s3_data_lake_stack.py`](./infra/cdk/stacks/s3_data_lake_stack.py) does this). Retention *periods* are a business/compliance decision; get them from the data owner, then automate. Keep expiration rules off raw until retention policy is signed off — transitions are reversible, deletions are not.
+- **Interview answer:** "Lifecycle rules in infrastructure-as-code: transitions for cost tiering, expirations for results/temp/non-current versions, all reviewed in PRs. Manual deletion in a lake is an anti-pattern — unauditable, error-prone, and it never actually runs on schedule."

@@ -17,8 +17,8 @@ Example (Glue job run):
       --arguments '{"--RAW_BUCKET":"...","--SILVER_BUCKET":"...","--INGESTION_DATE":"2026-07-01"}'
 
 Input example (CSV rows in bronze):
-    order_id,customer_id,product_id,order_ts,quantity,unit_price,currency,channel,region
-    O100001,C0001,P0050,2026-07-01T09:30:12Z,2,19.99,USD,web,north
+    order_id,customer_id,product_id,order_ts,quantity,unit_price,currency,status
+    O100001,C0001,P0050,2026-07-01T09:30:12Z,2,19.99,USD,COMPLETED
 
 Output example (silver Parquet, partitioned by order_date):
     silver/entity=orders/order_date=2026-07-01/part-*.parquet
@@ -81,8 +81,7 @@ def clean_orders_records(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
             "unit_price": price,
             "gross_amount": round(qty * price, 2),
             "currency": r.get("currency", "USD"),
-            "channel": r.get("channel"),
-            "region": r.get("region"),
+            "status": (r.get("status") or "UNKNOWN").upper(),
             "order_date": order_date,
         })
     return out

@@ -96,7 +96,7 @@ Full architecture, every CDK stack, and the deployment walkthrough live in [`pro
 
 Thirteen self-contained labs, each with objective, architecture, prerequisites, **cost warning**, steps, code, validation, **cleanup**, interview questions, and production notes. See [`labs/`](./labs/).
 
-**Status:** [Lab 01 — S3 Data Lake](./labs/lab-01-s3-data-lake/) is complete and fully runnable (deployable CDK stack, working scripts, passing tests, cleanup). Labs 02–13 are scaffolded and being built in priority order — see [`REPO-CONTENT-GAP-REPORT.md`](./REPO-CONTENT-GAP-REPORT.md) for exactly what's done vs pending.
+**Status:** [Lab 01 — S3 Data Lake](./labs/lab-01-s3-data-lake/) is complete and fully runnable (deployable CDK stack, working scripts, passing tests, cleanup). Lab 02 (Glue crawler) is written and synth-verified but awaiting an end-to-end run against a real account. Labs 03–13 are scaffolds and **not runnable yet** — see [`REPO-CONTENT-GAP-REPORT.md`](./REPO-CONTENT-GAP-REPORT.md) for exactly what's done vs pending.
 
 > 💰 **Cost warning:** labs create real, billable AWS resources. Every lab has a mandatory cleanup step. Always set a budget alarm first — see [`labs/lab-01-s3-data-lake/`](./labs/) and the account-setup guidance in [Module 01](./01-aws-core-services/).
 
@@ -150,9 +150,18 @@ The capstone deploys via AWS CDK (Python). High level: configure `infra/cdk/`, b
 
 ---
 
-## Content status
+## Content status (honest, updated per pass)
 
-Built in deep, complete passes. **[`REPO-CONTENT-GAP-REPORT.md`](./REPO-CONTENT-GAP-REPORT.md)** is the audited inventory of what's fully written vs still scaffolded. Currently complete and runnable: all root docs, Module 00, **Module 02 (S3 lake)**, and **Lab 01** (deployable CDK, working scripts, passing tests, cleanup). Everything else is scaffolded and marked as such — no silent placeholders.
+Built in deep, complete passes. **[`REPO-CONTENT-GAP-REPORT.md`](./REPO-CONTENT-GAP-REPORT.md)** is the audited inventory; this is the summary:
+
+| Status | What |
+|---|---|
+| ✅ **Complete** | Root reference docs · **Module 01 (AWS core services — IAM/STS, VPC, KMS/Secrets/SSM, CloudWatch/CloudTrail, SQS/SNS, EventBridge, Lambda, Step Functions)** · **Module 02 (S3 data lake)** · **Lab 01** (runnable end-to-end) · scripts, sample data, 47 passing tests |
+| ✅ **Deployable CDK** | `DataLakeStack` and `GlueCatalogStack` (both `cdk synth`-verified; DataLakeStack is Lab 01's) |
+| 🔄 **In progress** | Lab 02 (written + synth-verified; end-to-end AWS verification pending) |
+| 📋 **Planned / scaffolded** | Module 00's topical files; Modules 03–12; Labs 03–13; Projects 01–07 (skeleton READMEs) — every scaffold self-identifies and is tracked in the gap report |
+
+**Not runnable yet:** Labs 03–13 and all projects. Nothing in this repo claims to run unless it has code, commands, validation, tests, and cleanup. Standards: [`CLAUDE.md`](./CLAUDE.md) · [`CONTENT-STANDARD.md`](./CONTENT-STANDARD.md) · build order: [`REPO-BUILD-ROADMAP.md`](./REPO-BUILD-ROADMAP.md).
 
 ---
 

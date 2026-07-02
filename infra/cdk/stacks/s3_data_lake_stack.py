@@ -7,8 +7,10 @@ Purpose:
     and tags. This is the stack Lab 01 deploys.
 
 Creates:
-    - Raw/Bronze bucket   (landing zone; lifecycle tiers old data to IA/Glacier)
-    - Silver bucket       (cleaned, query-ready)
+    - Raw bucket          (landing zone, exactly as received; lifecycle tiers
+                           old data to IA/Glacier)
+    - Bronze bucket       (typed / lightly-cleaned copy of raw)
+    - Silver bucket       (cleaned, deduplicated, query-ready)
     - Gold bucket         (business marts)
     - Athena results bucket (query output; short expiry lifecycle)
     All with: SSE (S3-managed) encryption, versioning, BlockPublicAccess.ALL,
@@ -20,7 +22,8 @@ Inputs (context / env):
     - Optional context "lake_prefix" to override the bucket name prefix.
 
 Outputs (CloudFormation):
-    RawBucketName, SilverBucketName, GoldBucketName, AthenaResultsBucketName.
+    RawBucketName, BronzeBucketName, SilverBucketName, GoldBucketName,
+    AthenaResultsBucketName.
 
 Deploy:
     cd infra/cdk
@@ -72,6 +75,13 @@ class DataLakeStack(Stack):
                 )
             ],
         )
+        self.bronze_bucket = self._make_bucket(
+            "BronzeBucket", f"{lake_prefix}-bronze-{suffix}", zone="bronze",
+            lifecycle=[
+                s3.LifecycleRule(id="bronze-noncurrent-cleanup", enabled=True,
+                                 noncurrent_version_expiration=Duration.days(60))
+            ],
+        )
         self.silver_bucket = self._make_bucket(
             "SilverBucket", f"{lake_prefix}-silver-{suffix}", zone="silver",
             lifecycle=[
@@ -97,6 +107,7 @@ class DataLakeStack(Stack):
 
         for name, bucket in {
             "RawBucketName": self.raw_bucket,
+            "BronzeBucketName": self.bronze_bucket,
             "SilverBucketName": self.silver_bucket,
             "GoldBucketName": self.gold_bucket,
             "AthenaResultsBucketName": self.athena_results_bucket,

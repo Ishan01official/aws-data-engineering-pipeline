@@ -4,7 +4,7 @@ The real code that builds and populates the lake. All of it runs; the tests and 
 
 ## The CDK stack — `infra/cdk/stacks/s3_data_lake_stack.py`
 
-The stack creates four buckets via one private helper, `_make_bucket`, so every bucket gets the same production-safe defaults. Key decisions in the code:
+The stack creates five buckets (raw, bronze, silver, gold, Athena results) via one private helper, `_make_bucket`, so every bucket gets the same production-safe defaults. Key decisions in the code:
 
 - **`encryption=S3_MANAGED`** — SSE-S3 at rest on every object. For regulated data you'd switch to `KMS` with a customer-managed key (Module 08).
 - **`versioned=True`** (except Athena results) — recover from bad overwrites; the raw source-of-truth especially needs this.

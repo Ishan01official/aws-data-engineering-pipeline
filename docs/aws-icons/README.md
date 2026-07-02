@@ -15,3 +15,15 @@ This repo does **not** bundle AWS's official icon assets, because they're distri
 - Keep Mermaid as the source of truth for flow logic (versionable, diffable).
 - Use draw.io + AWS icons for the "hero" architecture image in a project README.
 - Do not commit the downloaded AWS icon toolkit into this repo; reference it locally.
+
+## Suggested diagrams to create with the official icons
+
+When you want polished, portfolio-grade versions of this repo's Mermaid diagrams, recreate these in draw.io/diagrams.net with the AWS shape library (source `.drawio` + exported PNG go in [`../diagrams/`](../diagrams/)):
+
+1. **Medallion data lake** — five S3 buckets (raw/bronze/silver/gold/results) with the Glue Catalog, Athena, and Redshift consumers. Source: [Module 02 · architecture.md](../../02-storage-s3-lake/architecture.md).
+2. **Lab 01 flow** — local CSVs → upload script → raw zone → (future) Glue/Athena. Source: [Lab 01 README](../../labs/lab-01-s3-data-lake/README.md).
+3. **Event-driven ingestion** — S3 event → EventBridge → Lambda/Step Functions with SNS/SQS fan-out and DLQs. Source: [Module 01 · eventbridge.md](../../01-aws-core-services/eventbridge.md) and [sqs-sns.md](../../01-aws-core-services/sqs-sns.md).
+4. **Pipeline orchestration** — EventBridge → Step Functions → Glue → quality gate → SNS, with retry/catch paths. Source: [Module 01 · step-functions.md](../../01-aws-core-services/step-functions.md).
+5. **The capstone platform** — the full enterprise architecture from the root README, once the later modules are built.
+
+Drawing conventions from the official AWS guidelines: service icons at consistent size, group boxes for VPC/account/zone boundaries, arrows labeled with the *action* (not just "→"), and a legend when you use more than ~8 services.

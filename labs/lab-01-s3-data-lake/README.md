@@ -10,7 +10,7 @@ Learn *why* a data lake is layered into zones and *how* the physical S3 layout (
 
 ## 2. What you'll build
 
-- Four S3 buckets — **raw/bronze**, **silver**, **gold**, and an **Athena query-results** bucket — each with encryption, versioning, blocked public access, lifecycle tiering, and tags.
+- Five S3 buckets — **raw**, **bronze**, **silver**, **gold**, and an **Athena query-results** bucket — each with encryption, versioning, blocked public access, lifecycle tiering, and tags. In this lab you land data in **raw**; bronze holds the typed/lightly-cleaned copy that later labs (Glue ETL) produce.
 - Retail sample data (orders, customers, products) landed in the raw zone under a partitioned key design.
 - Scripts to create the layout, upload data, and validate it.
 
@@ -25,8 +25,9 @@ flowchart LR
     subgraph Local
         CSV[Retail CSVs<br/>orders / customers / products]
     end
-    CSV -->|upload_sample_data.py| RAW[S3 Raw / Bronze<br/>immutable, partitioned]
-    RAW -->|Glue ETL later| SILVER[S3 Silver<br/>cleaned Parquet]
+    CSV -->|upload_sample_data.py| RAW[S3 Raw<br/>immutable, partitioned]
+    RAW -->|typed copy, Lab 03| BRONZE[S3 Bronze<br/>typed, lightly cleaned]
+    BRONZE -->|Glue ETL later| SILVER[S3 Silver<br/>cleaned Parquet]
     SILVER -->|aggregate later| GOLD[S3 Gold<br/>business marts]
     RAW -. queried by .-> ATH[Athena]
     SILVER -. queried by .-> ATH
@@ -37,7 +38,7 @@ The silver/gold *transformation* is built in later labs (Glue ETL). This lab est
 
 ## 5. AWS services used
 
-Amazon S3 (four buckets), AWS CDK (provisioning), and AWS CLI. Athena is referenced conceptually here and used for real in Lab 04.
+Amazon S3 (five buckets), AWS CDK (provisioning), and AWS CLI. Athena is referenced conceptually here and used for real in Lab 04.
 
 ## 6. Prerequisites
 
@@ -53,11 +54,12 @@ This lab creates **real S3 buckets and objects**. With the tiny sample data, cos
 
 ## 8. Folder / bucket design
 
-Four buckets, each named `ade-retail-lake-<zone>-<account>-<region>` (the account+region suffix keeps names globally unique — set by CDK at deploy time, no account ID hardcoded):
+Five buckets, each named `ade-retail-lake-<zone>-<account>-<region>` (the account+region suffix keeps names globally unique — set by CDK at deploy time, no account ID hardcoded):
 
 | Bucket | Purpose | Versioned | Lifecycle |
 |---|---|---|---|
-| `...-raw-...` | Immutable landing zone (bronze) | Yes | → IA @30d, → Glacier @90d |
+| `...-raw-...` | Immutable landing zone, exactly as received | Yes | → IA @30d, → Glacier @90d |
+| `...-bronze-...` | Typed / lightly-cleaned copy of raw (filled by Lab 03) | Yes | non-current cleanup @60d |
 | `...-silver-...` | Cleaned, query-ready | Yes | non-current cleanup @30d |
 | `...-gold-...` | Business marts | Yes | non-current cleanup @30d |
 | `...-athena-results-...` | Query output | No | expire @14d |
@@ -89,7 +91,7 @@ aws s3 ls | grep ade-retail-lake
 cd infra/cdk
 cdk bootstrap                        # one-time per account/region
 cdk synth                            # render CloudFormation locally — no cost
-cdk deploy DataLakeStack             # creates the 4 buckets — see cost note
+cdk deploy DataLakeStack             # creates the 5 buckets — see cost note
 ```
 
 `cdk deploy` prints the bucket names as stack **Outputs** (RawBucketName, etc.). Copy the raw bucket name for the next step, or fetch it:
@@ -163,7 +165,7 @@ Because the data sits under `key=value` partitions in a single logical prefix, a
 #    but if you uploaded a lot, you can also empty manually):
 aws s3 rm "s3://$RAW_BUCKET" --recursive
 
-# 2. Destroy the stack — removes all four buckets:
+# 2. Destroy the stack — removes all five buckets:
 cd infra/cdk
 cdk destroy DataLakeStack
 ```
